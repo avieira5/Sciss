@@ -1,0 +1,55 @@
+name: Build and Package SCIS Windows Release
+
+on:
+  release:
+    types: [published] # Dispara quando uma release é publicada no GitHub
+  push:
+    tags:
+      - 'v*' # Dispara quando uma tag iniciando com "v" é enviada (ex: v1.0.0)
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Checkout do código-fonte do repositório
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Configuração do ambiente Java (Necessário para dependências do Flutter CLI)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. Configuração do SDK do Flutter
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      # 4. Exibe a versão do Flutter para verificação nos logs
+      - name: Check Flutter Version
+        run: flutter --version
+
+      # 5. Instalação das dependências do pubspec.yaml
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # 6. Compilação do aplicativo Flutter em Modo Release para Windows
+      - name: Build Windows Application
+        run: flutter build windows --release
+
+      # 7. Empacotamento do App em formato MSIX
+      - name: Package MSIX Installer
+        run: flutter pub run msix:create
+
+      # 8. Upload do Instalador MSIX para os Ativos da Release do GitHub
+      - name: Upload MSIX to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/windows/runner/Release/*.msix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
